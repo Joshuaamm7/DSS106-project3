@@ -1,0 +1,98 @@
+[
+  {
+    "index": 0,
+    "image": "data/frames/frame_00.png",
+    "source": "OR_ABI-L2-CMIPC-M6C13_G19_s20261251801177_e20261251803562_c20261251804024.nc",
+    "timestamp": "2026-05-05 18:01 UTC",
+    "globalMin": 202.14102172851562,
+    "globalMax": 329.10357666015625
+  },
+  {
+    "index": 1,
+    "image": "data/frames/frame_01.png",
+    "source": "OR_ABI-L2-CMIPC-M6C13_G19_s20261251806177_e20261251808563_c20261251809026.nc",
+    "timestamp": "2026-05-05 18:06 UTC",
+    "globalMin": 202.14102172851562,
+    "globalMax": 329.10357666015625
+  },
+  {
+    "index": 2,
+    "image": "data/frames/frame_02.png",
+    "source": "OR_ABI-L2-CMIPC-M6C13_G19_s20261251811177_e20261251813562_c20261251814023.nc",
+    "timestamp": "2026-05-05 18:11 UTC",
+    "globalMin": 202.14102172851562,
+    "globalMax": 329.10357666015625
+  },
+  {
+    "index": 3,
+    "image": "data/frames/frame_03.png",
+    "source": "OR_ABI-L2-CMIPC-M6C13_G19_s20261251816177_e20261251818562_c20261251819014.nc",
+    "timestamp": "2026-05-05 18:16 UTC",
+    "globalMin": 202.14102172851562,
+    "globalMax": 329.10357666015625
+  },
+  {
+    "index": 4,
+    "image": "data/frames/frame_04.png",
+    "source": "OR_ABI-L2-CMIPC-M6C13_G19_s20261251821177_e20261251823563_c20261251824028.nc",
+    "timestamp": "2026-05-05 18:21 UTC",
+    "globalMin": 202.14102172851562,
+    "globalMax": 329.10357666015625
+  },
+  {
+    "index": 5,
+    "image": "data/frames/frame_05.png",
+    "source": "OR_ABI-L2-CMIPC-M6C13_G19_s20261251826177_e20261251828562_c20261251829017.nc",
+    "timestamp": "2026-05-05 18:26 UTC",
+    "globalMin": 202.14102172851562,
+    "globalMax": 329.10357666015625
+  },
+  {
+    "index": 6,
+    "image": "data/frames/frame_06.png",
+    "source": "OR_ABI-L2-CMIPC-M6C13_G19_s20261251831177_e20261251833562_c20261251834011.nc",
+    "timestamp": "2026-05-05 18:31 UTC",
+    "globalMin": 202.14102172851562,
+    "globalMax": 329.10357666015625
+  },
+  {
+    "index": 7,
+    "image": "data/frames/frame_07.png",
+    "source": "OR_ABI-L2-CMIPC-M6C13_G19_s20261251836177_e20261251838562_c20261251839019.nc",
+    "timestamp": "2026-05-05 18:36 UTC",
+    "globalMin": 202.14102172851562,
+    "globalMax": 329.10357666015625
+  },
+  {
+    "index": 8,
+    "image": "data/frames/frame_08.png",
+    "source": "OR_ABI-L2-CMIPC-M6C13_G19_s20261251841177_e20261251843562_c20261251844013.nc",
+    "timestamp": "2026-05-05 18:41 UTC",
+    "globalMin": 202.14102172851562,
+    "globalMax": 329.10357666015625
+  },
+  {
+    "index": 9,
+    "image": "data/frames/frame_09.png",
+    "source": "OR_ABI-L2-CMIPC-M6C13_G19_s20261251846177_e20261251848562_c20261251849033.nc",
+    "timestamp": "2026-05-05 18:46 UTC",
+    "globalMin": 202.14102172851562,
+    "globalMax": 329.10357666015625
+  },
+  {
+    "index": 10,
+    "image": "data/frames/frame_10.png",
+    "source": "OR_ABI-L2-CMIPC-M6C13_G19_s20261251851177_e20261251853562_c20261251854015.nc",
+    "timestamp": "2026-05-05 18:51 UTC",
+    "globalMin": 202.14102172851562,
+    "globalMax": 329.10357666015625
+  },
+  {
+    "index": 11,
+    "image": "data/frames/frame_11.png",
+    "source": "OR_ABI-L2-CMIPC-M6C13_G19_s20261251856177_e20261251858562_c20261251859007.nc",
+    "timestamp": "2026-05-05 18:56 UTC",
+    "globalMin": 202.14102172851562,
+    "globalMax": 329.10357666015625
+  }
+]

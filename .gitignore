@@ -1,0 +1,9 @@
+# Raw GOES NetCDF files are large and should be downloaded locally.
+*.nc
+data/raw/
+data/**/*.nc
+
+# Local environment and notebook artifacts.
+.DS_Store
+__pycache__/
+.ipynb_checkpoints/

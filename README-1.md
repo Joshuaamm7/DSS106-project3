@@ -5,6 +5,42 @@
 
 ---
 
+## GOES-19 Channel 13 Frame Preprocessing
+
+Raw GOES NetCDF `.nc` files are intentionally ignored by Git because they are
+large. Keep the downloaded Channel 13 files locally in `data/raw/`; group
+members should run the project download script or AWS CLI command to recreate
+that folder instead of committing raw satellite files.
+
+This project preprocesses GOES-19 ABI-L2-CMIPC Channel 13 files from:
+
+```bash
+s3://noaa-goes19/ABI-L2-CMIPC/2026/125/18/
+```
+
+Only files whose names contain `M6C13` are converted. From the project root,
+run:
+
+```bash
+python scripts/process_goes_to_png.py
+```
+
+The script writes grayscale PNG frames and metadata to:
+
+```text
+data/frames/
+├── frame_00.png
+├── frame_01.png
+├── frames.json
+└── cloud_summary.csv
+```
+
+The D3 site should load `data/frames/frames.json`, then use each entry's
+`image` path for the time-slider frame. `cloud_summary.csv` contains per-frame
+CMI summary values for charts or captions.
+
+---
+
 ## Research Question
 > **How does GOES-16 satellite-observed Sea Surface Temperature predict and trace the rapid intensification of Atlantic hurricanes during the 2023 season?**
 
