@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Watching Clouds Move — GOES-19 Ch.13 Explorer</title>
+
+  <!-- Fonts: Syne (display/bold) + IBM Plex Mono (data/labels) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+
+  <!-- D3.js v7 -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════════════ HEADER -->
+  <header>
+    <div class="header-inner">
+      <div class="sat-badge">GOES‑19 · ABI‑L2‑CMIPC · CHANNEL 13 · 2026‑05‑05</div>
+      <h1>Watching Clouds Move</h1>
+      <p class="subtitle">
+        Sixty minutes of infrared satellite data over the Western Hemisphere.
+        Each frame is one scan of GOES-19's thermal infrared channel —
+        brighter = colder cloud tops, darker = warmer air or clear sky.
+      </p>
+      <div class="header-meta">
+        <span>18:01 – 18:56 UTC</span>
+        <span>·</span>
+        <span>12 frames · 5-min cadence</span>
+        <span>·</span>
+        <span>CMI range: 202 – 329 K</span>
+      </div>
+    </div>
+    <div class="scan-rule"></div>
+  </header>
+
+  <main>
+
+    <!-- ══════════════════════════════════════ §1  FRAME GRID -->
+    <section class="section" id="sec-grid">
+      <div class="section-head">
+        <span class="sec-num">01</span>
+        <div>
+          <h2>Frame Sequence Preview</h2>
+          <p class="section-desc">
+            All 12 frames side-by-side. Each covers the same spatial extent —
+            watch how the jet-stream cloud bands and frontal systems shift
+            position across the hour. Click any thumbnail to jump to that frame
+            in the interactive viewer below.
+          </p>
+        </div>
+      </div>
+      <div id="frame-grid"></div>
+    </section>
+
+    <!-- ══════════════════════════════════════ §2  MEAN CMI CHART -->
+    <section class="section" id="sec-mean">
+      <div class="section-head">
+        <span class="sec-num">02</span>
+        <div>
+          <h2>Mean Brightness Temperature Over Time</h2>
+          <p class="section-desc">
+            The scene-average CMI value (Kelvin) per frame. Values near 279 K
+            reflect a mix of warm surface and cold cloud throughout the disk.
+            The subtle downward drift over the hour suggests a slight increase
+            in cold, high-altitude cloud coverage. Hover dots for exact values.
+          </p>
+        </div>
+      </div>
+      <div id="mean-chart"></div>
+    </section>
+
+    <!-- ══════════════════════════════════════ §3  RANGE CHART -->
+    <section class="section" id="sec-range">
+      <div class="section-head">
+        <span class="sec-num">03</span>
+        <div>
+          <h2>CMI Min / Max Range Over Time</h2>
+          <p class="section-desc">
+            The shaded band spans the per-frame minimum and maximum CMI values.
+            The <span class="legend-cyan">cyan line</span> is the maximum (warmest pixels — surface or low cloud);
+            the <span class="legend-orange">orange dashed line</span> is the minimum (coldest cloud tops).
+            The widening band shows the scene's thermal contrast growing across the hour.
+          </p>
+        </div>
+      </div>
+      <div id="range-chart"></div>
+    </section>
+
+    <!-- ══════════════════════════════════════ §4  INTERACTIVE TIMELAPSE -->
+    <section class="section" id="sec-timelapse">
+      <div class="section-head">
+        <span class="sec-num">04</span>
+        <div>
+          <h2>Interactive Time-Lapse Explorer</h2>
+          <p class="section-desc">
+            Use the slider, arrow buttons, or <strong>Play</strong> to animate
+            the frames. The chart marker tracks the active frame. Click any
+            thumbnail strip below the image to jump directly.
+          </p>
+        </div>
+      </div>
+
+      <div class="timelapse-layout">
+
+        <!-- Left: main image + controls -->
+        <div class="viewer-panel">
+          <div class="frame-wrapper">
+            <img id="main-frame" src="" alt="GOES-19 satellite frame" />
+            <div id="frame-badge"></div>
+          </div>
+
+          <div class="controls">
+            <button id="btn-prev">&#9664; Prev</button>
+            <button id="btn-play" class="btn-primary">&#9654; Play</button>
+            <button id="btn-next">Next &#9654;</button>
+          </div>
+
+          <div class="slider-row">
+            <span class="time-label" id="t-start"></span>
+            <input type="range" id="frame-slider" min="0" max="11" step="1" value="0" />
+            <span class="time-label" id="t-end"></span>
+          </div>
+
+          <div id="thumb-strip"></div>
+        </div>
+
+        <!-- Right: linked chart + details -->
+        <div class="sidebar">
+          <div id="linked-chart"></div>
+          <div id="details-panel">
+            <div class="panel-title">Frame Details</div>
+            <table id="details-table"><tbody></tbody></table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════ §5  EARLY vs LATE -->
+    <section class="section" id="sec-compare">
+      <div class="section-head">
+        <span class="sec-num">05</span>
+        <div>
+          <h2>Early vs. Late Frame Comparison</h2>
+          <p class="section-desc">
+            First frame (18:01 UTC) vs. last frame (18:56 UTC). Notice how the
+            frontal cloud band across the U.S. has advanced eastward and the
+            cold cloud cluster over the Gulf region has evolved over the hour.
+          </p>
+        </div>
+      </div>
+      <div class="compare-grid">
+        <div class="compare-item">
+          <img id="cmp-early" src="" alt="Frame 00" />
+          <div class="compare-label" id="lbl-early"></div>
+        </div>
+        <div class="compare-arrow">→</div>
+        <div class="compare-item">
+          <img id="cmp-late" src="" alt="Frame 11" />
+          <div class="compare-label" id="lbl-late"></div>
+        </div>
+      </div>
+      <div id="compare-stats"></div>
+    </section>
+
+    <!-- ══════════════════════════════════════ §6  METADATA TABLE -->
+    <section class="section" id="sec-table">
+      <div class="section-head">
+        <span class="sec-num">06</span>
+        <div>
+          <h2>Full Frame Metadata Table</h2>
+          <p class="section-desc">
+            All frames with their summary statistics. Click any row to load
+            that frame in the interactive viewer above.
+          </p>
+        </div>
+      </div>
+      <div id="metadata-table-wrap"></div>
+    </section>
+
+  </main>
+
+  <footer>
+    <p>
+      Data: NOAA GOES-19 ABI-L2-CMIPC Channel 13 ·
+      <code>s3://noaa-goes19/ABI-L2-CMIPC/2026/125/18/</code> ·
+      DSC 106 Project 3
+    </p>
+  </footer>
+
+  <!-- Shared tooltip div (positioned absolutely by JS) -->
+  <div id="tooltip" class="tooltip"></div>
+
+  <script src="main.js"></script>
+</body>
+</html>
