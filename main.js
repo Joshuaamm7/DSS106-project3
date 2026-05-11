@@ -3,8 +3,8 @@
    DSC 106 Project 3 – Final Submission
 
    Data (real GOES-19 satellite data):
-     data/frames/frames.json       — 12 frame metadata + global CMI range
-     data/frames/cloud_summary.csv — per-frame mean/min/max CMI in Kelvin
+     data/frames/frames.json       — frame metadata + global CMI range
+     data/frames/cloud_summary.csv — per-frame mean/min/max/cold_fraction/std CMI
 
    Views:
      1. Satellite frame viewer — slider, play/pause, speed control
@@ -45,10 +45,12 @@ Promise.all([
   // Merge per-frame stats into frame objects
   const statsMap = new Map(summary.map(s => [s.index, s]));
   framesRaw.forEach(f => {
-    const s    = statsMap.get(f.index) || {};
-    f.mean_cmi = s.mean_cmi;
-    f.min_cmi  = s.min_cmi;
-    f.max_cmi  = s.max_cmi;
+    const s                  = statsMap.get(f.index) || {};
+    f.mean_cmi               = s.mean_cmi;
+    f.min_cmi                = s.min_cmi;
+    f.max_cmi                = s.max_cmi;
+    f.cold_fraction_240k     = s.cold_fraction_240k;
+    f.std_cmi                = s.std_cmi;
   });
 
   allFrames = framesRaw;
@@ -418,17 +420,18 @@ function buildScatter() {
   const defs = svg.append("defs");
   const grad = defs.append("linearGradient").attr("id", "scatter-grad");
   grad.append("stop").attr("offset","0%").attr("stop-color", color(0));
-  grad.append("stop").attr("offset","100%").attr("stop-color", color(11));
+  grad.append("stop").attr("offset","100%").attr("stop-color", color(allFrames.length - 1));
 
   legG.append("rect").attr("width", legendW).attr("height", 8)
     .attr("fill", "url(#scatter-grad)").attr("rx", 2);
+  const tFmt = t => t.replace("2026-05-05 ", "").replace(" UTC", "");
   legG.append("text").attr("x", 0).attr("y", 20)
     .attr("fill","var(--text3)").attr("font-size","9px")
-    .attr("font-family","var(--font-mono)").text("18:01");
+    .attr("font-family","var(--font-mono)").text(tFmt(allFrames[0].timestamp));
   legG.append("text").attr("x", legendW).attr("y", 20)
     .attr("text-anchor","end").attr("fill","var(--text3)")
     .attr("font-size","9px").attr("font-family","var(--font-mono)")
-    .text("18:56");
+    .text(tFmt(allFrames[allFrames.length - 1].timestamp));
   legG.append("text").attr("x", legendW / 2).attr("y", 32)
     .attr("text-anchor","middle").attr("fill","var(--text3)")
     .attr("font-size","9px").attr("font-family","var(--font-mono)")
@@ -486,14 +489,20 @@ function initViewer() {
 // ================================================================
 function updateDetails(frame) {
   const rows = [
-    ["Frame",    String(frame.index).padStart(2, "0")],
-    ["Time",     frame.timestamp],
-    ["Mean CMI", frame.mean_cmi.toFixed(3) + " K"],
-    ["Min CMI",  frame.min_cmi.toFixed(2)  + " K"],
-    ["Max CMI",  frame.max_cmi.toFixed(2)  + " K"],
-    ["Spread",   (frame.max_cmi - frame.min_cmi).toFixed(2) + " K"],
-    ["Glob min", frame.globalMin.toFixed(2) + " K"],
-    ["Glob max", frame.globalMax.toFixed(2) + " K"],
+    ["Frame",      String(frame.index).padStart(2, "0")],
+    ["Time",       frame.timestamp],
+    ["Mean CMI",   frame.mean_cmi.toFixed(3) + " K"],
+    ["Min CMI",    frame.min_cmi.toFixed(2)  + " K"],
+    ["Max CMI",    frame.max_cmi.toFixed(2)  + " K"],
+    ["Spread",     (frame.max_cmi - frame.min_cmi).toFixed(2) + " K"],
+    ["Cold <240K", frame.cold_fraction_240k != null
+                    ? (frame.cold_fraction_240k * 100).toFixed(2) + "%"
+                    : "—"],
+    ["Std CMI",    frame.std_cmi != null
+                    ? frame.std_cmi.toFixed(3) + " K"
+                    : "—"],
+    ["Glob min",   frame.globalMin.toFixed(2) + " K"],
+    ["Glob max",   frame.globalMax.toFixed(2) + " K"],
   ];
   const tbody = d3.select("#details-table tbody");
   tbody.html("");

@@ -15,8 +15,9 @@
   <div class="header-badge">GOES-19 · ABI-L2-CMIPC · Channel 13 · 10.3 µm Thermal IR · May 5 2026</div>
   <h1>Cloud Top Temperature Explorer</h1>
   <p class="subtitle">
-    How do cloud systems evolve over a one-hour window?<br>
-    12 real GOES-19 satellite scans · 18:01–18:56 UTC · 5-minute intervals · CONUS domain
+    How do cold cloud-top regions change in GOES-19 Channel 13 imagery over a 3-hour window,
+    and what do these changes suggest about short-term convective activity?<br>
+    36 real GOES-19 satellite scans · 18:01–20:56 UTC · 5-minute intervals · CONUS domain
   </p>
 </header>
 
@@ -32,7 +33,7 @@
     </div>
     <p class="section-desc">
       Grayscale brightness temperature — brighter = colder cloud tops (higher altitude), darker = warm surface or low cloud.
-      Normalized to the global min/max range across all 12 frames (202–329 K).
+      Normalized to the global min/max range across all 36 frames (~198–330 K).
       <span class="hint">Drag the slider · Press Play to animate · Click any chart point below to jump to that frame</span>
     </p>
 
@@ -42,9 +43,9 @@
         <div id="colorbar-wrap">
           <div id="colorbar"></div>
           <div class="colorbar-labels">
-            <span>202 K · Cold tops</span>
-            <span>~265 K · Mid cloud</span>
-            <span>329 K · Warm surface</span>
+            <span>198 K · Cold tops</span>
+            <span>~264 K · Mid cloud</span>
+            <span>330 K · Warm surface</span>
           </div>
         </div>
       </div>
@@ -82,7 +83,7 @@
     </div>
     <p class="section-desc">
       Scene-average CMI (K) across all valid CONUS pixels per 5-minute scan.
-      A downward drift over the hour indicates increasing cold cloud coverage — consistent with afternoon convective development.
+      A downward drift over the 3-hour window may suggest increasing cold cloud coverage — consistent with afternoon convective development.
       The <strong style="color:var(--accent2)">green annotation</strong> marks the frame with the coldest scene mean.
       <span class="hint">Click any dot to load that frame · Hover for exact values · Orange marker tracks current frame</span>
     </p>
@@ -102,7 +103,7 @@
       The <strong style="color:var(--accent)">blue line</strong> = warmest pixel (surface or low cloud).
       The <strong style="color:var(--hot)">red dashed line</strong> = coldest pixel (highest cloud top).
       The shaded band is the full temperature range per frame.
-      The widening band reveals <strong>growing convective activity</strong> — deep cold cloud tops intensify over the hour.
+      The widening band may suggest <strong>growing convective activity</strong> — deep cold cloud tops appear to intensify over the 3-hour window.
       <span class="hint">Hover dots for per-frame values</span>
     </p>
     <div id="range-chart"></div>
@@ -120,7 +121,7 @@
       Each dot is one frame. X-axis = scene-mean CMI; Y-axis = minimum CMI (the single coldest pixel in the CONUS scene).
       Dots are colored by time (early frames = purple, later = yellow).
       The <strong style="color:var(--orange)">orange ring</strong> marks the currently selected frame.
-      A diverging relationship — where min drops faster than mean — indicates isolated deep convective towers
+      A diverging relationship — where min drops faster than mean — may suggest isolated deep convective towers
       forming while the broader scene stays relatively warm.
       <span class="hint">Click any dot to load that frame · Hover for values</span>
     </p>
@@ -139,23 +140,24 @@
     <div class="writeup-body">
       <h3>Research Question</h3>
       <p>
-        How does cloud top brightness temperature vary spatially and temporally over a one-hour window,
-        and what do these patterns reveal about convective activity?
-        GOES-19 Channel 13 (10.3 µm thermal IR) measures emitted radiation from cloud tops or the surface.
-        Cold anomalies indicate high, deep convective clouds; warm values indicate the surface or shallow clouds.
+        How do cold cloud-top regions change in GOES-19 Channel 13 imagery over a 3-hour window,
+        and what do these changes suggest about short-term convective activity?
+        GOES-19 Channel 13 (10.3 µm thermal infrared) measures emitted radiation from cloud tops or the surface.
+        Colder brightness temperatures often correspond to higher cloud tops and deeper convection,
+        while warmer values often correspond to lower clouds or the surface.
       </p>
 
       <h3>Dataset</h3>
       <p>
         NOAA GOES-19 ABI Level-2 Cloud and Moisture Imagery (CMIPC), Channel 13, CONUS domain.
-        12 frames at 5-minute intervals, 18:01–18:56 UTC, May 5 2026.
+        36 frames at 5-minute intervals, 18:01–20:56 UTC, May 5 2026.
         Downloaded from the NOAA GOES Open Data Registry on AWS
-        (<code>s3://noaa-goes19/ABI-L2-CMIPC/2026/125/18/</code>, public bucket, no credentials required).
+        (<code>s3://noaa-goes19/ABI-L2-CMIPC/2026/125/{18,19,20}/</code>, public bucket, no credentials required).
         Raw NetCDF4 files were processed by <code>scripts/process_goes_to_png.py</code>:
         the CMI variable (brightness temperature array) was normalized to a shared global min/max range
-        across all 12 frames and exported as grayscale PNGs.
-        Per-frame statistics — mean, min, and max CMI across all valid (non-NaN) CONUS pixels —
-        were written to <code>data/frames/cloud_summary.csv</code>.
+        across all 36 frames and exported as grayscale PNGs.
+        Per-frame statistics — mean, min, max, fraction of pixels below 240 K (cold cloud proxy),
+        and standard deviation — were written to <code>data/frames/cloud_summary.csv</code>.
       </p>
 
       <h3>Visual Encodings</h3>
@@ -185,7 +187,7 @@
       <p>
         Each frame's mean, min, and max CMI values are scene-level aggregations —
         computed over all valid (finite, non-fill) pixels in the CONUS domain for that 5-minute scan.
-        The global min (202.14 K) and max (329.10 K) are computed across all 12 frames combined
+        The global min (~198.39 K) and max (~329.96 K) are computed across all 36 frames combined
         and used to normalize the PNG grayscale values so that brightness is consistent across frames.
         No data was filtered or excluded beyond masking fill values as defined in the GOES-R product specification.
       </p>

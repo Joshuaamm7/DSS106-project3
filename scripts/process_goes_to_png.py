@@ -18,6 +18,10 @@ OUTPUT_DIR = Path("data/frames")
 CHANNEL_MARKER = "M6C13"
 VARIABLE_NAME = "CMI"
 
+# Pixels with CMI below this threshold (K) are counted as cold (high-altitude) cloud tops.
+# 240 K is a standard meteorological threshold for deep convective cloud.
+COLD_THRESHOLD = 240.0
+
 # GOES fixed-grid arrays sometimes appear upside-down depending on the viewer.
 # If the exported frames look vertically inverted in the D3 site, change this
 # value to True and rerun this script.
@@ -121,12 +125,16 @@ def main() -> None:
         valid_values = array[np.isfinite(array)]
         if valid_values.size == 0:
             mean_cmi = np.nan
-            min_cmi = np.nan
-            max_cmi = np.nan
+            min_cmi  = np.nan
+            max_cmi  = np.nan
+            cold_fraction = np.nan
+            std_cmi  = np.nan
         else:
             mean_cmi = float(valid_values.mean())
-            min_cmi = float(valid_values.min())
-            max_cmi = float(valid_values.max())
+            min_cmi  = float(valid_values.min())
+            max_cmi  = float(valid_values.max())
+            cold_fraction = float(np.sum(valid_values < COLD_THRESHOLD) / valid_values.size)
+            std_cmi  = float(valid_values.std())
 
         image_array = normalize_to_uint8(array, global_min, global_max)
         if FLIP_VERTICAL:
@@ -156,6 +164,8 @@ def main() -> None:
                 "mean_cmi": mean_cmi,
                 "min_cmi": min_cmi,
                 "max_cmi": max_cmi,
+                "cold_fraction_240k": cold_fraction,
+                "std_cmi": std_cmi,
             }
         )
 

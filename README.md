@@ -7,7 +7,9 @@
 
 ## Research Question
 
-**How does cloud top brightness temperature vary spatially and temporally over a one-hour window, and what do these patterns reveal about convective activity?**
+**How do cold cloud-top regions change in GOES-19 Channel 13 imagery over a one-hour window, and what do these changes suggest about short-term convective activity?**
+
+GOES-19 Channel 13 (10.3 µm thermal infrared) measures emitted radiation from cloud tops or the surface. Colder brightness temperatures often correspond to higher cloud tops and deeper convection, while warmer values often correspond to lower clouds or the surface.
 
 ---
 
