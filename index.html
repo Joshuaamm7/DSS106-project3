@@ -3,90 +3,209 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DSC 106 Project 3 – GOES Satellite Checkpoint</title>
-
-  <!-- D3.js v7 for data loading and charts -->
+  <title>GOES-19 Cloud Temperature Explorer</title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
-
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <h1>DSC 106 Project 3 – GOES Satellite Visualization Checkpoint</h1>
-
-  <p class="intro">
-    <strong>Research direction:</strong> How can GOES satellite thermal infrared imagery
-    reveal atmospheric patterns relevant to tracking weather systems?
-    This checkpoint explores one hour of GOES-19 Channel 13 (10.3 µm) data as early
-    pipeline progress toward the final interactive visualization.
-    Each frame is a 5-minute scan; brighter pixels = colder (higher) cloud tops.
+<header>
+  <div class="header-badge">GOES-19 · ABI-L2-CMIPC · Channel 13 · 10.3 µm Thermal IR · May 5 2026</div>
+  <h1>Cloud Top Temperature Explorer</h1>
+  <p class="subtitle">
+    How do cloud systems evolve over a one-hour window?<br>
+    12 real GOES-19 satellite scans · 18:01–18:56 UTC · 5-minute intervals · CONUS domain
   </p>
+</header>
 
-  <!-- ── VIEWS 1–3: Frame viewer with slider and play/pause ── -->
-  <section>
-    <h2>Views 1–3: Frame Viewer with Time Controls</h2>
-    <p>Use the slider or Play button to step through all 12 frames (18:01–18:56 UTC, May 5 2026).</p>
+<main>
 
-    <div id="viewer">
-      <!-- Timestamp label above the image -->
-      <div id="frame-label">Loading...</div>
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SECTION 1: SATELLITE FRAME VIEWER                          -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section id="section-viewer">
+    <div class="section-header">
+      <h2><span class="section-num">01</span> Satellite Frame Viewer</h2>
+      <div id="frame-badge">Loading…</div>
+    </div>
+    <p class="section-desc">
+      Grayscale brightness temperature — brighter = colder cloud tops (higher altitude), darker = warm surface or low cloud.
+      Normalized to the global min/max range across all 12 frames (202–329 K).
+      <span class="hint">Drag the slider · Press Play to animate · Click any chart point below to jump to that frame</span>
+    </p>
 
-      <!-- The satellite image -->
-      <img id="main-frame" src="" alt="GOES-19 Channel 13 frame" />
-
-      <!-- Slider: min/max/value are set by JS after data loads -->
-      <div id="slider-row">
-        <label for="frame-slider">Frame:</label>
-        <input type="range" id="frame-slider" min="0" max="11" step="1" value="0" />
-        <span id="slider-val">0 / 11</span>
+    <div id="viewer-layout">
+      <div id="viewer-left">
+        <img id="main-frame" src="" alt="GOES-19 Channel 13 brightness temperature" />
+        <div id="colorbar-wrap">
+          <div id="colorbar"></div>
+          <div class="colorbar-labels">
+            <span>202 K · Cold tops</span>
+            <span>~265 K · Mid cloud</span>
+            <span>329 K · Warm surface</span>
+          </div>
+        </div>
       </div>
 
-      <!-- Play / Pause and step buttons -->
-      <div id="controls">
-        <button id="btn-prev">◀ Prev</button>
-        <button id="btn-play">▶ Play</button>
-        <button id="btn-next">Next ▶</button>
+      <div id="viewer-right">
+        <div id="controls">
+          <button id="btn-prev">&#9664; Prev</button>
+          <button id="btn-play">&#9654; Play</button>
+          <button id="btn-next">Next &#9654;</button>
+        </div>
+        <div id="slider-row">
+          <input type="range" id="frame-slider" min="0" max="11" step="1" value="0" />
+          <span id="slider-val">0 / 11</span>
+        </div>
+        <div id="speed-row">
+          <label>Speed:</label>
+          <input type="range" id="speed-slider" min="200" max="1200" step="100" value="700" />
+          <span id="speed-val">700ms</span>
+        </div>
+        <table id="details-table">
+          <thead><tr><th>Property</th><th>Value</th></tr></thead>
+          <tbody></tbody>
+        </table>
       </div>
     </div>
   </section>
 
-  <!-- ── VIEW 4: Mean CMI over time ── -->
-  <section>
-    <h2>View 4: Mean CMI Over Time</h2>
-    <p>
-      Scene-average brightness temperature (K) per frame.
-      The subtle downward drift suggests slightly increasing cold cloud coverage.
-      The <strong style="color:#e07b00;">orange marker</strong> tracks the currently selected frame.
-      Hover any dot for the exact value.
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SECTION 2: MEAN CMI OVER TIME                              -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section id="section-mean">
+    <div class="section-header">
+      <h2><span class="section-num">02</span> Scene-Mean Brightness Temperature Over Time</h2>
+    </div>
+    <p class="section-desc">
+      Scene-average CMI (K) across all valid CONUS pixels per 5-minute scan.
+      A downward drift over the hour indicates increasing cold cloud coverage — consistent with afternoon convective development.
+      The <strong style="color:var(--accent2)">green annotation</strong> marks the frame with the coldest scene mean.
+      <span class="hint">Click any dot to load that frame · Hover for exact values · Orange marker tracks current frame</span>
     </p>
-    <!-- D3 draws an SVG chart into this div -->
     <div id="mean-chart"></div>
   </section>
 
-  <!-- ── VIEW 5: Min / Max CMI range over time ── -->
-  <section>
-    <h2>View 5: CMI Min / Max Range Over Time</h2>
-    <p>
-      The shaded band shows the per-frame min–max spread of brightness temperatures.
-      The <strong style="color:#1a7abf;">blue line</strong> is the max (warmest pixels);
-      the <strong style="color:#c0392b;">red dashed line</strong> is the min (coldest cloud tops).
-      The band widens over time — thermal contrast is growing.
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SECTION 3: MIN/MAX THERMAL SPREAD                          -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section id="section-range">
+    <div class="section-header">
+      <h2><span class="section-num">03</span> Thermal Spread — Min &amp; Max Brightness Temperature</h2>
+    </div>
+    <p class="section-desc">
+      Per-frame min and max of all valid CONUS pixels.
+      The <strong style="color:var(--accent)">blue line</strong> = warmest pixel (surface or low cloud).
+      The <strong style="color:var(--hot)">red dashed line</strong> = coldest pixel (highest cloud top).
+      The shaded band is the full temperature range per frame.
+      The widening band reveals <strong>growing convective activity</strong> — deep cold cloud tops intensify over the hour.
+      <span class="hint">Hover dots for per-frame values</span>
     </p>
     <div id="range-chart"></div>
   </section>
 
-  <!-- ── VIEW 6: Metadata panel for selected frame ── -->
-  <section>
-    <h2>View 6: Selected Frame Details</h2>
-    <p>This panel updates whenever you move the slider or click Play.</p>
-    <table id="details-table">
-      <tbody></tbody>
-    </table>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SECTION 4: MIN vs MEAN SCATTER PLOT                        -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section id="section-scatter">
+    <div class="section-header">
+      <h2><span class="section-num">04</span> Coldest Pixel vs. Scene Mean — Convective Depth</h2>
+    </div>
+    <p class="section-desc">
+      Each dot is one frame. X-axis = scene-mean CMI; Y-axis = minimum CMI (the single coldest pixel in the CONUS scene).
+      Dots are colored by time (early frames = purple, later = yellow).
+      The <strong style="color:var(--orange)">orange ring</strong> marks the currently selected frame.
+      A diverging relationship — where min drops faster than mean — indicates isolated deep convective towers
+      forming while the broader scene stays relatively warm.
+      <span class="hint">Click any dot to load that frame · Hover for values</span>
+    </p>
+    <div id="scatter-chart"></div>
   </section>
 
-  <!-- Floating tooltip, positioned by JS on chart hover -->
-  <div id="tooltip"></div>
 
-  <script src="main.js"></script>
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SECTION 5: WRITE-UP                                        -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section id="section-writeup">
+    <div class="section-header">
+      <h2><span class="section-num">05</span> Design Rationale &amp; Development Process</h2>
+    </div>
+
+    <div class="writeup-body">
+      <h3>Research Question</h3>
+      <p>
+        How does cloud top brightness temperature vary spatially and temporally over a one-hour window,
+        and what do these patterns reveal about convective activity?
+        GOES-19 Channel 13 (10.3 µm thermal IR) measures emitted radiation from cloud tops or the surface.
+        Cold anomalies indicate high, deep convective clouds; warm values indicate the surface or shallow clouds.
+      </p>
+
+      <h3>Dataset</h3>
+      <p>
+        NOAA GOES-19 ABI Level-2 Cloud and Moisture Imagery (CMIPC), Channel 13, CONUS domain.
+        12 frames at 5-minute intervals, 18:01–18:56 UTC, May 5 2026.
+        Downloaded from the NOAA GOES Open Data Registry on AWS
+        (<code>s3://noaa-goes19/ABI-L2-CMIPC/2026/125/18/</code>, public bucket, no credentials required).
+        Raw NetCDF4 files were processed by <code>scripts/process_goes_to_png.py</code>:
+        the CMI variable (brightness temperature array) was normalized to a shared global min/max range
+        across all 12 frames and exported as grayscale PNGs.
+        Per-frame statistics — mean, min, and max CMI across all valid (non-NaN) CONUS pixels —
+        were written to <code>data/frames/cloud_summary.csv</code>.
+      </p>
+
+      <h3>Visual Encodings</h3>
+      <p>
+        Position (y-axis) encodes brightness temperature in Kelvin throughout all chart views,
+        chosen as the most accurate quantitative channel for comparison.
+        In the satellite image, luminance encodes temperature — brighter pixels are colder,
+        matching the standard meteorological convention for thermal IR imagery.
+        In the scatter plot, hue encodes time (frame index), using D3's interpolateCool scale
+        so temporal progression is readable without obscuring the position encoding.
+        Dot size is fixed to avoid conflating area with a variable that has no area meaning here.
+      </p>
+
+      <h3>Interaction Design</h3>
+      <p>
+        All four views are linked through a single <code>setFrame()</code> function.
+        Clicking any dot on the mean chart or scatter plot jumps the satellite image and all
+        other views to that frame simultaneously — a details-on-demand technique that lets users
+        connect a statistical anomaly directly to the spatial imagery that caused it.
+        The scatter plot's orange highlight ring moves to the selected frame, maintaining
+        positional context within the distribution even while the image view updates.
+        The play animation with adjustable speed lets users observe temporal evolution
+        across all views at once, which a static plot cannot support.
+      </p>
+
+      <h3>Data Transformations</h3>
+      <p>
+        Each frame's mean, min, and max CMI values are scene-level aggregations —
+        computed over all valid (finite, non-fill) pixels in the CONUS domain for that 5-minute scan.
+        The global min (202.14 K) and max (329.10 K) are computed across all 12 frames combined
+        and used to normalize the PNG grayscale values so that brightness is consistent across frames.
+        No data was filtered or excluded beyond masking fill values as defined in the GOES-R product specification.
+      </p>
+
+      <h3>Development Process</h3>
+      <p>
+        Approximately 25 person-hours total across the team.
+        Setting up the data pipeline (<code>process_goes_to_png.py</code>) to pull NetCDF4 files
+        from AWS S3, handle the GOES-R ABI fixed-grid projection, and compute per-frame statistics
+        took the most time due to coordinate system issues (~10 hours).
+        Building the D3 visualization with four linked views took ~12 hours,
+        with the scatter plot interaction and cross-view synchronization being the most complex pieces.
+        Writeup and final polish took ~3 hours.
+      </p>
+    </div>
+  </section>
+
+</main>
+
+<div id="tooltip"></div>
+<script src="main.js"></script>
 </body>
 </html>
