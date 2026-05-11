@@ -10,6 +10,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import xarray as xr
+from matplotlib import colormaps
 from PIL import Image
 
 
@@ -21,6 +22,10 @@ VARIABLE_NAME = "CMI"
 # Pixels with CMI below this threshold (K) are counted as cold (high-altitude) cloud tops.
 # 240 K is a standard meteorological threshold for deep convective cloud.
 COLD_THRESHOLD = 240.0
+
+# Colormap for exported PNG frames.
+# RdYlBu_r: blue = cold cloud tops (~198 K), white/yellow = mid-level, red = warm surface (~330 K)
+COLORMAP = colormaps["RdYlBu_r"]
 
 # GOES fixed-grid arrays sometimes appear upside-down depending on the viewer.
 # If the exported frames look vertically inverted in the D3 site, change this
@@ -88,12 +93,18 @@ def find_global_range(nc_files: list[Path]) -> tuple[float, float]:
     return global_min, global_max
 
 
-def normalize_to_uint8(array: np.ndarray, global_min: float, global_max: float) -> np.ndarray:
-    """Normalize CMI values to 0-255 using the shared global range."""
+def apply_colormap(array: np.ndarray, global_min: float, global_max: float) -> np.ndarray:
+    """Normalize CMI values and apply COLORMAP. Returns a uint8 RGB array (H, W, 3).
+
+    Low CMI (~198 K, cold cloud tops) maps to blue.
+    High CMI (~330 K, warm surface) maps to red.
+    Fill/NaN pixels are mapped to black (0, 0, 0).
+    """
     normalized = (array - global_min) / (global_max - global_min)
-    normalized = np.clip(normalized, 0, 1)
+    normalized = np.clip(normalized, 0.0, 1.0)
     normalized = np.nan_to_num(normalized, nan=0.0, posinf=1.0, neginf=0.0)
-    return (normalized * 255).astype(np.uint8)
+    rgba = COLORMAP(normalized)           # float (H, W, 4) in [0, 1]
+    return (rgba[:, :, :3] * 255).astype(np.uint8)  # drop alpha, convert to uint8
 
 
 def main() -> None:
@@ -136,13 +147,13 @@ def main() -> None:
             cold_fraction = float(np.sum(valid_values < COLD_THRESHOLD) / valid_values.size)
             std_cmi  = float(valid_values.std())
 
-        image_array = normalize_to_uint8(array, global_min, global_max)
+        image_array = apply_colormap(array, global_min, global_max)
         if FLIP_VERTICAL:
             image_array = np.flipud(image_array)
 
         frame_name = f"frame_{index:0{frame_digits}d}.png"
         frame_path = OUTPUT_DIR / frame_name
-        Image.fromarray(image_array, mode="L").save(frame_path)
+        Image.fromarray(image_array, mode="RGB").save(frame_path)
         print(f"Saved {frame_path}")
 
         timestamp = parse_goes_timestamp(nc_path.name)
