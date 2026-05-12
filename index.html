@@ -12,11 +12,13 @@
 <body>
 
 <header>
-  <div class="header-badge">GOES-19 · ABI-L2-CMIPC · Channel 13 · 10.3 µm Thermal IR · May 5 2026</div>
+  <div class="header-badge">GOES-19 Channel 13 · 10.3 µm thermal infrared · May 5, 2026</div>
   <h1>Cloud Top Temperature Explorer</h1>
   <p class="subtitle">
     How do cold cloud-top regions change in GOES-19 Channel 13 imagery over a 3-hour window,
-    and what do these changes suggest about short-term convective activity?<br>
+    and what do these changes suggest about short-term convective activity?
+  </p>
+  <p class="header-meta">
     36 real GOES-19 satellite scans · 18:01–20:56 UTC · 5-minute intervals · CONUS domain
   </p>
 </header>
@@ -26,7 +28,7 @@
   <!-- SECTION 1: SATELLITE FRAME VIEWER -->
   <section id="section-viewer">
     <div class="section-header">
-      <h2><span class="section-num">01</span> Satellite Frame Viewer</h2>
+      <h2><span class="section-num">1</span> Satellite Frame Viewer</h2>
       <div id="frame-badge">Loading…</div>
     </div>
     <p class="section-desc">
@@ -72,7 +74,7 @@
   <!-- SECTION 2: MEAN CMI OVER TIME -->
   <section id="section-mean">
     <div class="section-header">
-      <h2><span class="section-num">02</span> Scene-Mean Brightness Temperature Over Time</h2>
+      <h2><span class="section-num">2</span> Scene-Mean Brightness Temperature Over Time</h2>
     </div>
     <p class="section-desc">
       Scene-average CMI (K) across all valid CONUS pixels per 5-minute scan.
@@ -86,14 +88,14 @@
   <!-- SECTION 3: MIN/MAX THERMAL SPREAD -->
   <section id="section-range">
     <div class="section-header">
-      <h2><span class="section-num">03</span> Thermal Spread — Min &amp; Max Brightness Temperature</h2>
+      <h2><span class="section-num">3</span> Thermal Spread: Min &amp; Max Brightness Temperature</h2>
     </div>
     <p class="section-desc">
       Per-frame min and max of all valid CONUS pixels.
       The <strong style="color:var(--accent)">blue line</strong> = warmest pixel (surface or low cloud).
       The <strong style="color:var(--hot)">red dashed line</strong> = coldest pixel (highest cloud top).
       The shaded band is the full temperature range per frame.
-      The widening band may suggest <strong>growing convective activity</strong> — deep cold cloud tops appear to intensify over the 3-hour window.
+      The widening band may suggest <strong>growing convective activity</strong>: deep cold cloud tops appear to intensify over the 3-hour window.
       <span class="hint">Hover dots for per-frame values</span>
     </p>
     <div id="range-chart"></div>
@@ -102,13 +104,13 @@
   <!-- SECTION 4: MIN vs MEAN SCATTER PLOT -->
   <section id="section-scatter">
     <div class="section-header">
-      <h2><span class="section-num">04</span> Coldest Pixel vs. Scene Mean — Convective Depth</h2>
+      <h2><span class="section-num">4</span> Coldest Pixel vs. Scene Mean: Convective Depth</h2>
     </div>
     <p class="section-desc">
       Each dot is one frame. X-axis = scene-mean CMI; Y-axis = minimum CMI (the single coldest pixel in the CONUS scene).
       Dots are colored by time (early frames = purple, later = yellow).
       The <strong style="color:var(--orange)">orange ring</strong> marks the currently selected frame.
-      A diverging relationship — where min drops faster than mean — may suggest isolated deep convective towers
+      A diverging relationship (where min drops faster than mean) may suggest isolated deep convective towers
       forming while the broader scene stays relatively warm.
       <span class="hint">Click any dot to load that frame · Hover for values</span>
     </p>
@@ -118,11 +120,11 @@
   <!-- SECTION 5: SCENE STD DEV -->
   <section id="section-bars">
     <div class="section-header">
-      <h2><span class="section-num">05</span> Scene Temperature Heterogeneity Over Time</h2>
+      <h2><span class="section-num">5</span> Scene Temperature Heterogeneity Over Time</h2>
     </div>
     <p class="section-desc">
       Standard deviation of brightness temperature across all valid CONUS pixels per frame.
-      As isolated convective towers develop, some pixels become very cold while most remain warm —
+      As isolated convective towers develop, some pixels become very cold while most remain warm,
       causing std to rise even when the scene mean barely changes.
       This makes std the most sensitive indicator of <strong>growing convective intensity</strong>
       in this dataset, revealing patterns invisible in the mean or min/max charts alone.
@@ -135,7 +137,7 @@
   <!-- SECTION 6: WRITE-UP -->
   <section id="section-writeup">
     <div class="section-header">
-      <h2><span class="section-num">06</span> Design Rationale &amp; Development Process</h2>
+      <h2><span class="section-num">6</span> Design Rationale &amp; Development Process</h2>
     </div>
     <div class="writeup-body">
       <h3>Research Question</h3>
@@ -146,6 +148,11 @@
         Colder brightness temperatures often correspond to higher cloud tops and deeper convection,
         while warmer values often correspond to lower clouds or the surface.
       </p>
+      <h3>What We Learned From The Visualization</h3>
+      <p>
+        Over 18:01-20:56 UTC on May 5, 2026, cold cloud-top regions in the CONUS scene expanded in extent, 
+        intensified in depth, and became more spatially heterogeneous. This pattern is consistent with afternoon convective development: 
+        surface heating drives updrafts, which push cloud tops higher and colder as the afternoon progresses.
       <h3>Dataset</h3>
       <p>
         NOAA GOES-19 ABI Level-2 Cloud and Moisture Imagery (CMIPC), Channel 13, CONUS domain.
@@ -155,20 +162,20 @@
         Raw NetCDF4 files were processed by <code>scripts/process_goes_to_png.py</code>:
         the CMI variable (brightness temperature array) was normalized to a shared global min/max range
         across all 36 frames and exported as grayscale PNGs.
-        Per-frame statistics — mean, min, max, fraction of pixels below 240 K (cold cloud proxy),
-        and standard deviation — were written to <code>data/frames/cloud_summary.csv</code>.
+        Per-frame statistics (mean, min, max, fraction of pixels below 240 K as a cold cloud proxy,
+        and standard deviation) were written to <code>data/frames/cloud_summary.csv</code>.
       </p>
       <h3>Visual Encodings</h3>
       <p>
         Position (y-axis) encodes brightness temperature in Kelvin throughout all chart views,
         chosen as the most accurate quantitative channel for comparison.
-        In the satellite image, luminance encodes temperature — brighter pixels are colder,
+        In the satellite image, luminance encodes temperature: brighter pixels are colder,
         matching the standard meteorological convention for thermal IR imagery.
         In the scatter plot, hue encodes time (frame index), using D3's interpolateCool scale
         so temporal progression is readable without obscuring the position encoding.
         Dot size is fixed to avoid conflating area with a variable that has no area meaning here.
         The standard deviation chart uses a filled area + line to encode scene temperature heterogeneity over time.
-        Std rises when isolated cold convective towers form amid a warm background — a signal invisible
+        Std rises when isolated cold convective towers form amid a warm background, a signal not visible
         in the mean or min/max charts. Position on the y-axis encodes Kelvin; the warm yellow color
         distinguishes it visually from the blue mean and red min lines in adjacent views.
       </p>
@@ -176,7 +183,7 @@
       <p>
         All five views are linked through a single <code>setFrame()</code> function.
         Clicking any dot on the mean chart, scatter plot, or bar chart jumps the satellite image
-        and all other views to that frame simultaneously — a details-on-demand technique that lets users
+        and all other views to that frame simultaneously, using a details-on-demand technique that lets users
         connect a statistical anomaly directly to the spatial imagery that caused it.
         The scatter plot's orange highlight ring and the bar chart's highlight box both move
         to the selected frame, maintaining positional context across views.
@@ -185,20 +192,20 @@
       </p>
       <h3>Data Transformations</h3>
       <p>
-        Each frame's mean, min, and max CMI values are scene-level aggregations —
-        computed over all valid (finite, non-fill) pixels in the CONUS domain for that 5-minute scan.
+        Each frame's mean, min, and max CMI values are scene-level aggregations, computed over all valid
+        (finite, non-fill) pixels in the CONUS domain for that 5-minute scan.
         The global min (~198.39 K) and max (~329.96 K) are computed across all 36 frames combined
         and used to normalize the PNG grayscale values so that brightness is consistent across frames.
         No data was filtered or excluded beyond masking fill values as defined in the GOES-R product specification.
       </p>
       <h3>Development Process</h3>
       <p>
-        Approximately 25 person-hours total across the team.
+        We spend about 20-25 hours total across the team.
         Setting up the data pipeline (<code>process_goes_to_png.py</code>) to pull NetCDF4 files
-        from AWS S3, handle the GOES-R ABI fixed-grid projection, and compute per-frame statistics
-        took the most time due to coordinate system issues (~10 hours).
-        Building the D3 visualization with five linked views took ~12 hours,
-        with the scatter plot and std deviation chart being the most insightful additions
+        from AWS S3 is the hardest part, since the data couldn't be download like the typicle csv file. Then we Handle the GOES-R ABI fixed-grid projection, and compute per-frame statistics
+        took the second most time due to coordinate system issues (~5 hours).
+        Building the D3 visualization with five linked views took ~12 hours, as we were having a hard time making the thermal graph colorful.
+        After that, the scatter plot and std deviation chart being the most insightful additions
         since they reveal patterns invisible in the mean line chart alone.
         Writeup and final polish took ~3 hours.
       </p>
