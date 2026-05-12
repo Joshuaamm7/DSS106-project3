@@ -11,7 +11,8 @@
      2. Mean CMI line chart — linked marker, click dot to jump frame
      3. Min/Max thermal spread — shaded band, hover tooltips
      4. Min vs Mean scatter plot — one dot per frame, reveals convective relationship
-     5. Frame details panel
+     5. Std CMI over time — scene heterogeneity, rises as convection grows
+     6. Frame details panel
    ================================================================ */
 
 "use strict";
@@ -33,32 +34,32 @@ let playSpeed        = 700;
 let allFrames        = [];
 let updateMeanMarker = () => {};
 let updateScatter    = () => {};
+let updateStd        = () => {};
 
 // ================================================================
-// BOOTSTRAP — load real data files
+// BOOTSTRAP
 // ================================================================
 Promise.all([
   d3.json("data/frames/frames.json"),
   d3.csv("data/frames/cloud_summary.csv", d3.autoType),
 ]).then(([framesRaw, summary]) => {
 
-  // Merge per-frame stats into frame objects
   const statsMap = new Map(summary.map(s => [s.index, s]));
   framesRaw.forEach(f => {
-    const s                  = statsMap.get(f.index) || {};
-    f.mean_cmi               = s.mean_cmi;
-    f.min_cmi                = s.min_cmi;
-    f.max_cmi                = s.max_cmi;
-    f.cold_fraction_240k     = s.cold_fraction_240k;
-    f.std_cmi                = s.std_cmi;
+    const s              = statsMap.get(f.index) || {};
+    f.mean_cmi           = s.mean_cmi;
+    f.min_cmi            = s.min_cmi;
+    f.max_cmi            = s.max_cmi;
+    f.cold_fraction_240k = s.cold_fraction_240k;
+    f.std_cmi            = s.std_cmi;
   });
 
   allFrames = framesRaw;
 
-  // Build all views
   updateMeanMarker = buildMeanChart();
   buildRangeChart();
   updateScatter    = buildScatter();
+  updateStd        = buildStdChart();
   initViewer();
   setFrame(0);
 
@@ -72,7 +73,7 @@ Promise.all([
 });
 
 // ================================================================
-// setFrame — single source of truth, keeps all views in sync
+// setFrame — keeps all views in sync
 // ================================================================
 function setFrame(idx) {
   currentFrame = Math.max(0, Math.min(allFrames.length - 1, idx));
@@ -86,12 +87,12 @@ function setFrame(idx) {
 
   updateMeanMarker(currentFrame);
   updateScatter(currentFrame);
+  updateStd(currentFrame);
   updateDetails(f);
 }
 
 // ================================================================
 // VIEW 2: Scene-mean CMI line chart
-// Transformation: scene-average of all valid CONUS pixels per frame
 // ================================================================
 function buildMeanChart() {
   const M  = { top: 28, right: 24, bottom: 52, left: 62 };
@@ -102,96 +103,71 @@ function buildMeanChart() {
 
   const svg = d3.select("#mean-chart")
     .append("svg").attr("width", TW).attr("height", TH);
-  const g = svg.append("g")
-    .attr("transform", `translate(${M.left},${M.top})`);
+  const g = svg.append("g").attr("transform", `translate(${M.left},${M.top})`);
 
-  const x = d3.scaleLinear()
-    .domain([0, allFrames.length - 1]).range([0, W]);
-
-  const yPad = 0.03;
+  const x = d3.scaleLinear().domain([0, allFrames.length - 1]).range([0, W]);
   const y = d3.scaleLinear()
-    .domain([
-      d3.min(allFrames, d => d.mean_cmi) - yPad,
-      d3.max(allFrames, d => d.mean_cmi) + yPad
-    ])
+    .domain([d3.min(allFrames,d=>d.mean_cmi)-0.03, d3.max(allFrames,d=>d.mean_cmi)+0.03])
     .range([H, 0]);
 
-  // Grid
-  g.append("g").attr("class", "grid")
+  g.append("g").attr("class","grid")
     .call(d3.axisLeft(y).ticks(4).tickSize(-W).tickFormat(""));
 
-  // X axis with time labels
-  g.append("g").attr("class", "axis")
-    .attr("transform", `translate(0,${H})`)
+  g.append("g").attr("class","axis").attr("transform",`translate(0,${H})`)
     .call(
       d3.axisBottom(x)
-        .tickValues(d3.range(0, allFrames.length))
+        .tickValues(d3.range(0, allFrames.length, Math.ceil(allFrames.length/12)))
         .tickFormat(i => allFrames[i]
-          ? allFrames[i].timestamp.replace("2026-05-05 ", "").replace(" UTC", "")
-          : "")
+          ? allFrames[i].timestamp.replace("2026-05-05 ","").replace(" UTC","") : "")
     )
     .selectAll("text")
-      .attr("transform", "rotate(-35)")
-      .style("text-anchor", "end")
-      .attr("dx", "-0.3em").attr("dy", "0.15em");
+      .attr("transform","rotate(-35)").style("text-anchor","end")
+      .attr("dx","-0.3em").attr("dy","0.15em");
 
-  // Y axis
-  g.append("g").attr("class", "axis")
-    .call(d3.axisLeft(y).ticks(4).tickFormat(d => d.toFixed(2)));
+  g.append("g").attr("class","axis")
+    .call(d3.axisLeft(y).ticks(4).tickFormat(d=>d.toFixed(2)));
 
-  // Y label
   g.append("text")
-    .attr("transform", "rotate(-90)").attr("x", -H / 2).attr("y", -48)
-    .attr("text-anchor", "middle").attr("fill", "var(--text3)")
-    .attr("font-size", "10px").attr("font-family", "var(--font-mono)")
+    .attr("transform","rotate(-90)").attr("x",-H/2).attr("y",-48)
+    .attr("text-anchor","middle").attr("fill","var(--text3)")
+    .attr("font-size","10px").attr("font-family","var(--font-mono)")
     .text("Mean Brightness Temp (K)");
 
-  // Annotate coldest mean frame
-  const coldestIdx = d3.minIndex(allFrames, d => d.mean_cmi);
+  const coldestIdx = d3.minIndex(allFrames, d=>d.mean_cmi);
   g.append("line")
-    .attr("x1", x(coldestIdx)).attr("x2", x(coldestIdx))
-    .attr("y1", 0).attr("y2", H)
-    .attr("stroke", "var(--accent2)").attr("stroke-width", 1.5)
-    .attr("stroke-dasharray", "4 3").attr("opacity", 0.8);
+    .attr("x1",x(coldestIdx)).attr("x2",x(coldestIdx)).attr("y1",0).attr("y2",H)
+    .attr("stroke","var(--accent2)").attr("stroke-width",1.5)
+    .attr("stroke-dasharray","4 3").attr("opacity",0.8);
   g.append("text")
-    .attr("x", x(coldestIdx) + 5).attr("y", 14)
-    .attr("fill", "var(--accent2)").attr("font-size", "10px")
-    .attr("font-family", "var(--font-mono)")
-    .text("↓ coldest scene mean");
+    .attr("x",x(coldestIdx)+5).attr("y",14)
+    .attr("fill","var(--accent2)").attr("font-size","10px")
+    .attr("font-family","var(--font-mono)").text("↓ coldest scene mean");
 
-  // Line
-  g.append("path").datum(allFrames).attr("class", "line-mean")
-    .attr("d", d3.line()
-      .x((d, i) => x(i)).y(d => y(d.mean_cmi))
-      .curve(d3.curveMonotoneX));
+  g.append("path").datum(allFrames).attr("class","line-mean")
+    .attr("d",d3.line().x((d,i)=>x(i)).y(d=>y(d.mean_cmi)).curve(d3.curveMonotoneX));
 
-  // Dots — clickable to jump frame
   g.selectAll(".dot").data(allFrames).join("circle")
-    .attr("class", "dot").attr("r", 5)
-    .attr("cx", (d, i) => x(i)).attr("cy", d => y(d.mean_cmi))
-    .on("mousemove", (event, d) => showTip(
+    .attr("class","dot").attr("r",4)
+    .attr("cx",(d,i)=>x(i)).attr("cy",d=>y(d.mean_cmi))
+    .on("mousemove",(event,d)=>showTip(
       `${d.timestamp}<br>Mean CMI: <b>${d.mean_cmi.toFixed(4)} K</b><br>
-       <span style="font-size:10px;color:#8a99b8">Click to load this frame</span>`,
-      event))
-    .on("mouseleave", hideTip)
-    .on("click", (event, d) => setFrame(d.index));
+       <span style="font-size:10px;color:#8a99b8">Click to load this frame</span>`,event))
+    .on("mouseleave",hideTip)
+    .on("click",(event,d)=>setFrame(d.index));
 
-  // Moving marker (orange vertical line + dot)
-  const markerLine = g.append("line").attr("class", "marker-line")
-    .attr("y1", 0).attr("y2", H);
-  const markerDot = g.append("circle").attr("class", "marker-dot").attr("r", 7);
+  const markerLine = g.append("line").attr("class","marker-line").attr("y1",0).attr("y2",H);
+  const markerDot  = g.append("circle").attr("class","marker-dot").attr("r",7);
 
   function updateMarker(idx) {
-    markerLine.attr("x1", x(idx)).attr("x2", x(idx));
-    markerDot.attr("cx", x(idx)).attr("cy", y(allFrames[idx].mean_cmi));
+    markerLine.attr("x1",x(idx)).attr("x2",x(idx));
+    markerDot.attr("cx",x(idx)).attr("cy",y(allFrames[idx].mean_cmi));
   }
   updateMarker(0);
   return updateMarker;
 }
 
 // ================================================================
-// VIEW 3: Min/Max thermal spread range chart
-// Transformation: per-frame min and max of all valid CONUS pixels
+// VIEW 3: Min/Max thermal spread
 // ================================================================
 function buildRangeChart() {
   const M  = { top: 28, right: 24, bottom: 52, left: 62 };
@@ -201,91 +177,68 @@ function buildRangeChart() {
   const H  = TH - M.top  - M.bottom;
 
   const svg = d3.select("#range-chart")
-    .append("svg").attr("width", TW).attr("height", TH);
-  const g = svg.append("g")
-    .attr("transform", `translate(${M.left},${M.top})`);
+    .append("svg").attr("width",TW).attr("height",TH);
+  const g = svg.append("g").attr("transform",`translate(${M.left},${M.top})`);
 
-  const x = d3.scaleLinear()
-    .domain([0, allFrames.length - 1]).range([0, W]);
+  const x = d3.scaleLinear().domain([0,allFrames.length-1]).range([0,W]);
   const y = d3.scaleLinear()
-    .domain([
-      d3.min(allFrames, d => d.min_cmi) - 2,
-      d3.max(allFrames, d => d.max_cmi) + 2
-    ])
-    .range([H, 0]);
+    .domain([d3.min(allFrames,d=>d.min_cmi)-2, d3.max(allFrames,d=>d.max_cmi)+2])
+    .range([H,0]);
 
-  g.append("g").attr("class", "grid")
+  g.append("g").attr("class","grid")
     .call(d3.axisLeft(y).ticks(5).tickSize(-W).tickFormat(""));
 
-  g.append("g").attr("class", "axis")
-    .attr("transform", `translate(0,${H})`)
+  g.append("g").attr("class","axis").attr("transform",`translate(0,${H})`)
     .call(
       d3.axisBottom(x)
-        .tickValues(d3.range(0, allFrames.length))
-        .tickFormat(i => allFrames[i]
-          ? allFrames[i].timestamp.replace("2026-05-05 ", "").replace(" UTC", "")
-          : "")
+        .tickValues(d3.range(0,allFrames.length,Math.ceil(allFrames.length/12)))
+        .tickFormat(i=>allFrames[i]
+          ? allFrames[i].timestamp.replace("2026-05-05 ","").replace(" UTC","") : "")
     )
     .selectAll("text")
-      .attr("transform", "rotate(-35)").style("text-anchor", "end")
-      .attr("dx", "-0.3em").attr("dy", "0.15em");
+      .attr("transform","rotate(-35)").style("text-anchor","end")
+      .attr("dx","-0.3em").attr("dy","0.15em");
 
-  g.append("g").attr("class", "axis").call(d3.axisLeft(y).ticks(5));
+  g.append("g").attr("class","axis").call(d3.axisLeft(y).ticks(5));
 
   g.append("text")
-    .attr("transform", "rotate(-90)").attr("x", -H / 2).attr("y", -48)
-    .attr("text-anchor", "middle").attr("fill", "var(--text3)")
-    .attr("font-size", "10px").attr("font-family", "var(--font-mono)")
+    .attr("transform","rotate(-90)").attr("x",-H/2).attr("y",-48)
+    .attr("text-anchor","middle").attr("fill","var(--text3)")
+    .attr("font-size","10px").attr("font-family","var(--font-mono)")
     .text("Brightness Temp (K)");
 
-  // Shaded band between min and max
-  g.append("path").datum(allFrames).attr("class", "area-range")
-    .attr("d", d3.area()
-      .x((d, i) => x(i)).y0(d => y(d.min_cmi)).y1(d => y(d.max_cmi))
+  g.append("path").datum(allFrames).attr("class","area-range")
+    .attr("d",d3.area()
+      .x((d,i)=>x(i)).y0(d=>y(d.min_cmi)).y1(d=>y(d.max_cmi))
       .curve(d3.curveMonotoneX));
 
-  // Max line (blue)
-  g.append("path").datum(allFrames).attr("class", "line-max")
-    .attr("d", d3.line()
-      .x((d, i) => x(i)).y(d => y(d.max_cmi)).curve(d3.curveMonotoneX));
+  g.append("path").datum(allFrames).attr("class","line-max")
+    .attr("d",d3.line().x((d,i)=>x(i)).y(d=>y(d.max_cmi)).curve(d3.curveMonotoneX));
+  g.append("path").datum(allFrames).attr("class","line-min")
+    .attr("d",d3.line().x((d,i)=>x(i)).y(d=>y(d.min_cmi)).curve(d3.curveMonotoneX));
 
-  // Min line (red dashed)
-  g.append("path").datum(allFrames).attr("class", "line-min")
-    .attr("d", d3.line()
-      .x((d, i) => x(i)).y(d => y(d.min_cmi)).curve(d3.curveMonotoneX));
-
-  // Hover dots
   g.selectAll(".rdot").data(allFrames).join("circle")
-    .attr("class", "dot").attr("r", 4)
-    .attr("cx", (d, i) => x(i)).attr("cy", d => y(d.max_cmi))
-    .on("mousemove", (event, d) => showTip(
-      `${d.timestamp}<br>` +
-      `Max: <b>${d.max_cmi.toFixed(2)} K</b><br>` +
-      `Min: <b>${d.min_cmi.toFixed(2)} K</b><br>` +
-      `Spread: <b>${(d.max_cmi - d.min_cmi).toFixed(2)} K</b>`,
-      event))
-    .on("mouseleave", hideTip);
+    .attr("class","dot").attr("r",4)
+    .attr("cx",(d,i)=>x(i)).attr("cy",d=>y(d.max_cmi))
+    .on("mousemove",(event,d)=>showTip(
+      `${d.timestamp}<br>Max: <b>${d.max_cmi.toFixed(2)} K</b><br>`+
+      `Min: <b>${d.min_cmi.toFixed(2)} K</b><br>`+
+      `Spread: <b>${(d.max_cmi-d.min_cmi).toFixed(2)} K</b>`,event))
+    .on("mouseleave",hideTip);
 
-  // Legend
-  const leg = g.append("g").attr("transform", `translate(${W - 185}, 4)`);
+  const leg = g.append("g").attr("transform",`translate(${W-185},4)`);
   leg.append("line").attr("x1",0).attr("y1",8).attr("x2",18).attr("y2",8)
     .attr("stroke","var(--accent)").attr("stroke-width",2);
   leg.append("text").attr("x",24).attr("y",12).attr("fill","var(--text2)")
-    .attr("font-size","10px").attr("font-family","var(--font-mono)")
-    .text("Max CMI (warmest)");
+    .attr("font-size","10px").attr("font-family","var(--font-mono)").text("Max CMI (warmest)");
   leg.append("line").attr("x1",0).attr("y1",24).attr("x2",18).attr("y2",24)
-    .attr("stroke","var(--hot)").attr("stroke-width",2)
-    .attr("stroke-dasharray","5 3");
+    .attr("stroke","var(--hot)").attr("stroke-width",2).attr("stroke-dasharray","5 3");
   leg.append("text").attr("x",24).attr("y",28).attr("fill","var(--text2)")
-    .attr("font-size","10px").attr("font-family","var(--font-mono)")
-    .text("Min CMI (coldest tops)");
+    .attr("font-size","10px").attr("font-family","var(--font-mono)").text("Min CMI (coldest tops)");
 }
 
 // ================================================================
-// VIEW 4: Min CMI vs Mean CMI scatter plot
-// Each dot = one frame. Reveals whether the coldest pixel
-// (deepest cloud top) tracks with the scene mean or diverges.
-// Active frame highlighted in orange; others in blue.
+// VIEW 4: Min vs Mean scatter plot
 // ================================================================
 function buildScatter() {
   const M  = { top: 28, right: 24, bottom: 52, left: 62 };
@@ -295,154 +248,202 @@ function buildScatter() {
   const H  = TH - M.top  - M.bottom;
 
   const svg = d3.select("#scatter-chart")
-    .append("svg").attr("width", TW).attr("height", TH);
-  const g = svg.append("g")
-    .attr("transform", `translate(${M.left},${M.top})`);
-
-  const xPad = 0.5;
-  const yPad = 2;
+    .append("svg").attr("width",TW).attr("height",TH);
+  const g = svg.append("g").attr("transform",`translate(${M.left},${M.top})`);
 
   const x = d3.scaleLinear()
-    .domain([
-      d3.min(allFrames, d => d.mean_cmi) - xPad,
-      d3.max(allFrames, d => d.mean_cmi) + xPad
-    ])
-    .range([0, W]);
-
+    .domain([d3.min(allFrames,d=>d.mean_cmi)-0.5, d3.max(allFrames,d=>d.mean_cmi)+0.5])
+    .range([0,W]);
   const y = d3.scaleLinear()
-    .domain([
-      d3.min(allFrames, d => d.min_cmi) - yPad,
-      d3.max(allFrames, d => d.min_cmi) + yPad
-    ])
-    .range([H, 0]);
+    .domain([d3.min(allFrames,d=>d.min_cmi)-2, d3.max(allFrames,d=>d.min_cmi)+2])
+    .range([H,0]);
 
-  // Color scale: frame index 0→11 mapped to a sequential blue palette
   const color = d3.scaleSequential()
-    .domain([0, allFrames.length - 1])
-    .interpolator(d3.interpolateCool);
+    .domain([0,allFrames.length-1]).interpolator(d3.interpolateCool);
 
-  // Grid
-  g.append("g").attr("class", "grid")
+  g.append("g").attr("class","grid")
     .call(d3.axisLeft(y).ticks(5).tickSize(-W).tickFormat(""));
-  g.append("g").attr("class", "grid")
-    .call(d3.axisBottom(x).ticks(5).tickSize(H).tickFormat(""))
-    .attr("transform", `translate(0,0)`);
+  g.append("g").attr("class","grid")
+    .call(d3.axisBottom(x).ticks(5).tickSize(H).tickFormat(""));
 
-  // Axes
-  g.append("g").attr("class", "axis")
-    .attr("transform", `translate(0,${H})`)
-    .call(d3.axisBottom(x).ticks(6).tickFormat(d => d.toFixed(2)));
+  g.append("g").attr("class","axis").attr("transform",`translate(0,${H})`)
+    .call(d3.axisBottom(x).ticks(6).tickFormat(d=>d.toFixed(2)));
+  g.append("g").attr("class","axis")
+    .call(d3.axisLeft(y).ticks(5).tickFormat(d=>d.toFixed(1)));
 
-  g.append("g").attr("class", "axis")
-    .call(d3.axisLeft(y).ticks(5).tickFormat(d => d.toFixed(1)));
-
-  // X label
-  g.append("text")
-    .attr("x", W / 2).attr("y", H + 44)
-    .attr("text-anchor", "middle").attr("fill", "var(--text3)")
-    .attr("font-size", "10px").attr("font-family", "var(--font-mono)")
+  g.append("text").attr("x",W/2).attr("y",H+44)
+    .attr("text-anchor","middle").attr("fill","var(--text3)")
+    .attr("font-size","10px").attr("font-family","var(--font-mono)")
     .text("Scene-Mean CMI (K) — average of all CONUS pixels");
-
-  // Y label
   g.append("text")
-    .attr("transform", "rotate(-90)").attr("x", -H / 2).attr("y", -48)
-    .attr("text-anchor", "middle").attr("fill", "var(--text3)")
-    .attr("font-size", "10px").attr("font-family", "var(--font-mono)")
+    .attr("transform","rotate(-90)").attr("x",-H/2).attr("y",-48)
+    .attr("text-anchor","middle").attr("fill","var(--text3)")
+    .attr("font-size","10px").attr("font-family","var(--font-mono)")
     .text("Min CMI (K) — coldest pixel = highest cloud top");
 
-  // Trend line (linear regression)
-  const xMean  = d3.mean(allFrames, d => d.mean_cmi);
-  const yMean  = d3.mean(allFrames, d => d.min_cmi);
-  const num    = d3.sum(allFrames, d => (d.mean_cmi - xMean) * (d.min_cmi - yMean));
-  const den    = d3.sum(allFrames, d => Math.pow(d.mean_cmi - xMean, 2));
-  const slope  = den !== 0 ? num / den : 0;
-  const interc = yMean - slope * xMean;
-
-  const xExtent = d3.extent(allFrames, d => d.mean_cmi);
+  const xMean=d3.mean(allFrames,d=>d.mean_cmi);
+  const yMean=d3.mean(allFrames,d=>d.min_cmi);
+  const num=d3.sum(allFrames,d=>(d.mean_cmi-xMean)*(d.min_cmi-yMean));
+  const den=d3.sum(allFrames,d=>Math.pow(d.mean_cmi-xMean,2));
+  const slope=den!==0?num/den:0;
+  const interc=yMean-slope*xMean;
+  const xExt=d3.extent(allFrames,d=>d.mean_cmi);
   g.append("line")
-    .attr("x1", x(xExtent[0])).attr("x2", x(xExtent[1]))
-    .attr("y1", y(slope * xExtent[0] + interc))
-    .attr("y2", y(slope * xExtent[1] + interc))
-    .attr("stroke", "var(--text3)").attr("stroke-width", 1)
-    .attr("stroke-dasharray", "4 4").attr("opacity", 0.5);
-
+    .attr("x1",x(xExt[0])).attr("x2",x(xExt[1]))
+    .attr("y1",y(slope*xExt[0]+interc)).attr("y2",y(slope*xExt[1]+interc))
+    .attr("stroke","var(--text3)").attr("stroke-width",1)
+    .attr("stroke-dasharray","4 4").attr("opacity",0.5);
   g.append("text")
-    .attr("x", x(xExtent[1]) - 4)
-    .attr("y", y(slope * xExtent[1] + interc) - 6)
-    .attr("text-anchor", "end").attr("fill", "var(--text3)")
-    .attr("font-size", "9px").attr("font-family", "var(--font-mono)")
-    .text("trend");
+    .attr("x",x(xExt[1])-4).attr("y",y(slope*xExt[1]+interc)-6)
+    .attr("text-anchor","end").attr("fill","var(--text3)")
+    .attr("font-size","9px").attr("font-family","var(--font-mono)").text("trend");
 
-  // Dots — one per frame, colored by time, clickable
   g.selectAll(".sdot").data(allFrames).join("circle")
-    .attr("class", "sdot")
-    .attr("cx", d => x(d.mean_cmi))
-    .attr("cy", d => y(d.min_cmi))
-    .attr("r", 7)
-    .attr("fill", d => color(d.index))
-    .attr("stroke", "var(--bg2)").attr("stroke-width", 1.5)
-    .style("cursor", "pointer")
-    .on("mousemove", (event, d) => showTip(
-      `${d.timestamp}<br>` +
-      `Mean: <b>${d.mean_cmi.toFixed(4)} K</b><br>` +
-      `Min: <b>${d.min_cmi.toFixed(2)} K</b><br>` +
-      `<span style="font-size:10px;color:#8a99b8">Click to load this frame</span>`,
-      event))
-    .on("mouseleave", hideTip)
-    .on("click", (event, d) => setFrame(d.index));
+    .attr("class","sdot")
+    .attr("cx",d=>x(d.mean_cmi)).attr("cy",d=>y(d.min_cmi))
+    .attr("r",6).attr("fill",d=>color(d.index))
+    .attr("stroke","var(--bg2)").attr("stroke-width",1.5)
+    .style("cursor","pointer")
+    .on("mousemove",(event,d)=>showTip(
+      `${d.timestamp}<br>Mean: <b>${d.mean_cmi.toFixed(4)} K</b><br>`+
+      `Min: <b>${d.min_cmi.toFixed(2)} K</b><br>`+
+      `<span style="font-size:10px;color:#8a99b8">Click to load this frame</span>`,event))
+    .on("mouseleave",hideTip)
+    .on("click",(event,d)=>setFrame(d.index));
 
-  // Frame index labels on dots
   g.selectAll(".sdot-label").data(allFrames).join("text")
-    .attr("class", "sdot-label")
-    .attr("x", d => x(d.mean_cmi))
-    .attr("y", d => y(d.min_cmi) + 4)
-    .attr("text-anchor", "middle")
-    .attr("fill", "var(--bg)")
-    .attr("font-size", "8px")
-    .attr("font-family", "var(--font-mono)")
-    .attr("pointer-events", "none")
-    .text(d => d.index);
+    .attr("class","sdot-label")
+    .attr("x",d=>x(d.mean_cmi)).attr("y",d=>y(d.min_cmi)+4)
+    .attr("text-anchor","middle").attr("fill","var(--bg)")
+    .attr("font-size","7px").attr("font-family","var(--font-mono)")
+    .attr("pointer-events","none").text(d=>d.index);
 
-  // Active frame highlight ring — updated by updateScatter()
-  const highlight = g.append("circle")
-    .attr("class", "scatter-highlight")
-    .attr("r", 11)
-    .attr("fill", "none")
-    .attr("stroke", "var(--orange)")
-    .attr("stroke-width", 2.5)
-    .attr("pointer-events", "none");
+  const highlight = g.append("circle").attr("class","scatter-highlight")
+    .attr("r",10).attr("fill","none")
+    .attr("stroke","var(--orange)").attr("stroke-width",2.5)
+    .attr("pointer-events","none");
 
-  // Color legend (time gradient)
-  const legendW = 120;
-  const legG = g.append("g")
-    .attr("transform", `translate(${W - legendW - 4}, 4)`);
-
-  const defs = svg.append("defs");
-  const grad = defs.append("linearGradient").attr("id", "scatter-grad");
-  grad.append("stop").attr("offset","0%").attr("stop-color", color(0));
-  grad.append("stop").attr("offset","100%").attr("stop-color", color(allFrames.length - 1));
-
-  legG.append("rect").attr("width", legendW).attr("height", 8)
-    .attr("fill", "url(#scatter-grad)").attr("rx", 2);
-  const tFmt = t => t.replace("2026-05-05 ", "").replace(" UTC", "");
-  legG.append("text").attr("x", 0).attr("y", 20)
+  const legendW=120;
+  const legG=g.append("g").attr("transform",`translate(${W-legendW-4},4)`);
+  const defs=svg.append("defs");
+  const grad=defs.append("linearGradient").attr("id","scatter-grad");
+  grad.append("stop").attr("offset","0%").attr("stop-color",color(0));
+  grad.append("stop").attr("offset","100%").attr("stop-color",color(allFrames.length-1));
+  legG.append("rect").attr("width",legendW).attr("height",8)
+    .attr("fill","url(#scatter-grad)").attr("rx",2);
+  const tFmt=t=>t.replace("2026-05-05 ","").replace(" UTC","");
+  legG.append("text").attr("x",0).attr("y",20)
     .attr("fill","var(--text3)").attr("font-size","9px")
     .attr("font-family","var(--font-mono)").text(tFmt(allFrames[0].timestamp));
-  legG.append("text").attr("x", legendW).attr("y", 20)
+  legG.append("text").attr("x",legendW).attr("y",20)
     .attr("text-anchor","end").attr("fill","var(--text3)")
     .attr("font-size","9px").attr("font-family","var(--font-mono)")
-    .text(tFmt(allFrames[allFrames.length - 1].timestamp));
-  legG.append("text").attr("x", legendW / 2).attr("y", 32)
+    .text(tFmt(allFrames[allFrames.length-1].timestamp));
+  legG.append("text").attr("x",legendW/2).attr("y",32)
     .attr("text-anchor","middle").attr("fill","var(--text3)")
     .attr("font-size","9px").attr("font-family","var(--font-mono)")
     .text("frame time (UTC)");
 
   function updateScatterFn(idx) {
-    const f = allFrames[idx];
-    highlight.attr("cx", x(f.mean_cmi)).attr("cy", y(f.min_cmi));
+    const f=allFrames[idx];
+    highlight.attr("cx",x(f.mean_cmi)).attr("cy",y(f.min_cmi));
   }
   updateScatterFn(0);
   return updateScatterFn;
+}
+
+// ================================================================
+// VIEW 5: Scene standard deviation over time
+// std_cmi measures scene heterogeneity — as isolated convective
+// towers develop, some pixels go very cold while most stay warm,
+// so std rises. This is a direct measure of convective intensity
+// that is invisible in mean/min/max alone.
+// ================================================================
+function buildStdChart() {
+  const M  = { top: 28, right: 24, bottom: 52, left: 62 };
+  const TW = Math.min(920, window.innerWidth - 52);
+  const TH = 230;
+  const W  = TW - M.left - M.right;
+  const H  = TH - M.top  - M.bottom;
+
+  const svg = d3.select("#bar-chart")
+    .append("svg").attr("width",TW).attr("height",TH);
+  const g = svg.append("g").attr("transform",`translate(${M.left},${M.top})`);
+
+  const x = d3.scaleLinear().domain([0,allFrames.length-1]).range([0,W]);
+  const yPad = (d3.max(allFrames,d=>d.std_cmi) - d3.min(allFrames,d=>d.std_cmi)) * 0.15;
+  const y = d3.scaleLinear()
+    .domain([d3.min(allFrames,d=>d.std_cmi)-yPad, d3.max(allFrames,d=>d.std_cmi)+yPad])
+    .range([H,0]);
+
+  g.append("g").attr("class","grid")
+    .call(d3.axisLeft(y).ticks(5).tickSize(-W).tickFormat(""));
+
+  g.append("g").attr("class","axis").attr("transform",`translate(0,${H})`)
+    .call(
+      d3.axisBottom(x)
+        .tickValues(d3.range(0,allFrames.length,Math.ceil(allFrames.length/12)))
+        .tickFormat(i=>allFrames[i]
+          ? allFrames[i].timestamp.replace("2026-05-05 ","").replace(" UTC","") : "")
+    )
+    .selectAll("text")
+      .attr("transform","rotate(-35)").style("text-anchor","end")
+      .attr("dx","-0.3em").attr("dy","0.15em");
+
+  g.append("g").attr("class","axis")
+    .call(d3.axisLeft(y).ticks(5).tickFormat(d=>d.toFixed(2)));
+
+  g.append("text")
+    .attr("transform","rotate(-90)").attr("x",-H/2).attr("y",-48)
+    .attr("text-anchor","middle").attr("fill","var(--text3)")
+    .attr("font-size","10px").attr("font-family","var(--font-mono)")
+    .text("Std Dev of Brightness Temp (K) — scene heterogeneity");
+
+  // Shaded area
+  g.append("path").datum(allFrames)
+    .attr("fill","var(--warm)").attr("opacity",0.1)
+    .attr("d",d3.area()
+      .x((d,i)=>x(i)).y0(H).y1(d=>y(d.std_cmi))
+      .curve(d3.curveMonotoneX));
+
+  // Line
+  g.append("path").datum(allFrames)
+    .attr("fill","none").attr("stroke","var(--warm)").attr("stroke-width",2.5)
+    .attr("d",d3.line().x((d,i)=>x(i)).y(d=>y(d.std_cmi)).curve(d3.curveMonotoneX));
+
+  // Peak annotation
+  const peakIdx = d3.maxIndex(allFrames, d=>d.std_cmi);
+  g.append("line")
+    .attr("x1",x(peakIdx)).attr("x2",x(peakIdx)).attr("y1",0).attr("y2",H)
+    .attr("stroke","var(--warm)").attr("stroke-width",1)
+    .attr("stroke-dasharray","4 3").attr("opacity",0.8);
+  g.append("text")
+    .attr("x",x(peakIdx)+5).attr("y",14)
+    .attr("fill","var(--warm)").attr("font-size","10px")
+    .attr("font-family","var(--font-mono)").text("↑ peak heterogeneity");
+
+  // Dots
+  g.selectAll(".stdot").data(allFrames).join("circle")
+    .attr("class","stdot dot")
+    .attr("cx",(d,i)=>x(i)).attr("cy",d=>y(d.std_cmi)).attr("r",4)
+    .attr("stroke","var(--warm)")
+    .on("mousemove",(event,d)=>showTip(
+      `${d.timestamp}<br>`+
+      `Std Dev: <b>${d.std_cmi.toFixed(3)} K</b><br>`+
+      `<span style="font-size:10px;color:#8a99b8">Higher = more varied scene temperatures</span>`,event))
+    .on("mouseleave",hideTip)
+    .on("click",(event,d)=>setFrame(d.index));
+
+  // Moving marker
+  const markerLine = g.append("line").attr("class","marker-line").attr("y1",0).attr("y2",H);
+  const markerDot  = g.append("circle").attr("class","marker-dot").attr("r",7);
+
+  function updateStdFn(idx) {
+    markerLine.attr("x1",x(idx)).attr("x2",x(idx));
+    markerDot.attr("cx",x(idx)).attr("cy",y(allFrames[idx].std_cmi));
+  }
+  updateStdFn(0);
+  return updateStdFn;
 }
 
 // ================================================================
@@ -485,22 +486,19 @@ function initViewer() {
 }
 
 // ================================================================
-// VIEW 5: Details panel
+// VIEW 6: Details panel
 // ================================================================
 function updateDetails(frame) {
   const rows = [
-    ["Frame",      String(frame.index).padStart(2, "0")],
+    ["Frame",      String(frame.index).padStart(2,"0")],
     ["Time",       frame.timestamp],
-    ["Mean CMI",   frame.mean_cmi.toFixed(3) + " K"],
-    ["Min CMI",    frame.min_cmi.toFixed(2)  + " K"],
-    ["Max CMI",    frame.max_cmi.toFixed(2)  + " K"],
+    ["Mean CMI",   frame.mean_cmi.toFixed(3)  + " K"],
+    ["Min CMI",    frame.min_cmi.toFixed(2)   + " K"],
+    ["Max CMI",    frame.max_cmi.toFixed(2)   + " K"],
     ["Spread",     (frame.max_cmi - frame.min_cmi).toFixed(2) + " K"],
+    ["Std Dev",    frame.std_cmi != null ? frame.std_cmi.toFixed(3) + " K" : "—"],
     ["Cold <240K", frame.cold_fraction_240k != null
-                    ? (frame.cold_fraction_240k * 100).toFixed(2) + "%"
-                    : "—"],
-    ["Std CMI",    frame.std_cmi != null
-                    ? frame.std_cmi.toFixed(3) + " K"
-                    : "—"],
+                    ? (frame.cold_fraction_240k * 100).toFixed(2) + "%" : "—"],
     ["Glob min",   frame.globalMin.toFixed(2) + " K"],
     ["Glob max",   frame.globalMax.toFixed(2) + " K"],
   ];

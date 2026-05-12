@@ -23,9 +23,7 @@
 
 <main>
 
-  <!-- ═══════════════════════════════════════════════════════════ -->
-  <!-- SECTION 1: SATELLITE FRAME VIEWER                          -->
-  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SECTION 1: SATELLITE FRAME VIEWER -->
   <section id="section-viewer">
     <div class="section-header">
       <h2><span class="section-num">01</span> Satellite Frame Viewer</h2>
@@ -36,20 +34,18 @@
       Normalized to the global min/max range across all 36 frames (~198–330 K).
       <span class="hint">Drag the slider · Press Play to animate · Click any chart point below to jump to that frame</span>
     </p>
-
     <div id="viewer-layout">
       <div id="viewer-left">
         <img id="main-frame" src="" alt="GOES-19 Channel 13 brightness temperature" />
         <div id="colorbar-wrap">
           <div id="colorbar"></div>
           <div class="colorbar-labels">
-            <span style="color:#3b6eba">■ 198 K · Cold tops (blue)</span>
-            <span>■ ~264 K · Mid cloud (white)</span>
-            <span style="color:#c0392b">■ 330 K · Warm surface (red)</span>
+            <span style="color:#3b6eba">&#9632; 198 K · Cold tops (blue)</span>
+            <span>&#9632; ~264 K · Mid cloud (white)</span>
+            <span style="color:#c0392b">&#9632; 330 K · Warm surface (red)</span>
           </div>
         </div>
       </div>
-
       <div id="viewer-right">
         <div id="controls">
           <button id="btn-prev">&#9664; Prev</button>
@@ -57,8 +53,8 @@
           <button id="btn-next">Next &#9654;</button>
         </div>
         <div id="slider-row">
-          <input type="range" id="frame-slider" min="0" max="11" step="1" value="0" />
-          <span id="slider-val">0 / 11</span>
+          <input type="range" id="frame-slider" min="0" max="35" step="1" value="0" />
+          <span id="slider-val">0 / 35</span>
         </div>
         <div id="speed-row">
           <label>Speed:</label>
@@ -73,10 +69,7 @@
     </div>
   </section>
 
-
-  <!-- ═══════════════════════════════════════════════════════════ -->
-  <!-- SECTION 2: MEAN CMI OVER TIME                              -->
-  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SECTION 2: MEAN CMI OVER TIME -->
   <section id="section-mean">
     <div class="section-header">
       <h2><span class="section-num">02</span> Scene-Mean Brightness Temperature Over Time</h2>
@@ -90,10 +83,7 @@
     <div id="mean-chart"></div>
   </section>
 
-
-  <!-- ═══════════════════════════════════════════════════════════ -->
-  <!-- SECTION 3: MIN/MAX THERMAL SPREAD                          -->
-  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SECTION 3: MIN/MAX THERMAL SPREAD -->
   <section id="section-range">
     <div class="section-header">
       <h2><span class="section-num">03</span> Thermal Spread — Min &amp; Max Brightness Temperature</h2>
@@ -109,10 +99,7 @@
     <div id="range-chart"></div>
   </section>
 
-
-  <!-- ═══════════════════════════════════════════════════════════ -->
-  <!-- SECTION 4: MIN vs MEAN SCATTER PLOT                        -->
-  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SECTION 4: MIN vs MEAN SCATTER PLOT -->
   <section id="section-scatter">
     <div class="section-header">
       <h2><span class="section-num">04</span> Coldest Pixel vs. Scene Mean — Convective Depth</h2>
@@ -128,15 +115,28 @@
     <div id="scatter-chart"></div>
   </section>
 
+  <!-- SECTION 5: SCENE STD DEV -->
+  <section id="section-bars">
+    <div class="section-header">
+      <h2><span class="section-num">05</span> Scene Temperature Heterogeneity Over Time</h2>
+    </div>
+    <p class="section-desc">
+      Standard deviation of brightness temperature across all valid CONUS pixels per frame.
+      As isolated convective towers develop, some pixels become very cold while most remain warm —
+      causing std to rise even when the scene mean barely changes.
+      This makes std the most sensitive indicator of <strong>growing convective intensity</strong>
+      in this dataset, revealing patterns invisible in the mean or min/max charts alone.
+      The <strong style="color:var(--warm)">yellow annotation</strong> marks peak scene heterogeneity.
+      <span class="hint">Click any dot to load that frame · Hover for exact values · Orange marker tracks current frame</span>
+    </p>
+    <div id="bar-chart"></div>
+  </section>
 
-  <!-- ═══════════════════════════════════════════════════════════ -->
-  <!-- SECTION 5: WRITE-UP                                        -->
-  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SECTION 6: WRITE-UP -->
   <section id="section-writeup">
     <div class="section-header">
-      <h2><span class="section-num">05</span> Design Rationale &amp; Development Process</h2>
+      <h2><span class="section-num">06</span> Design Rationale &amp; Development Process</h2>
     </div>
-
     <div class="writeup-body">
       <h3>Research Question</h3>
       <p>
@@ -146,7 +146,6 @@
         Colder brightness temperatures often correspond to higher cloud tops and deeper convection,
         while warmer values often correspond to lower clouds or the surface.
       </p>
-
       <h3>Dataset</h3>
       <p>
         NOAA GOES-19 ABI Level-2 Cloud and Moisture Imagery (CMIPC), Channel 13, CONUS domain.
@@ -159,7 +158,6 @@
         Per-frame statistics — mean, min, max, fraction of pixels below 240 K (cold cloud proxy),
         and standard deviation — were written to <code>data/frames/cloud_summary.csv</code>.
       </p>
-
       <h3>Visual Encodings</h3>
       <p>
         Position (y-axis) encodes brightness temperature in Kelvin throughout all chart views,
@@ -169,20 +167,22 @@
         In the scatter plot, hue encodes time (frame index), using D3's interpolateCool scale
         so temporal progression is readable without obscuring the position encoding.
         Dot size is fixed to avoid conflating area with a variable that has no area meaning here.
+        The standard deviation chart uses a filled area + line to encode scene temperature heterogeneity over time.
+        Std rises when isolated cold convective towers form amid a warm background — a signal invisible
+        in the mean or min/max charts. Position on the y-axis encodes Kelvin; the warm yellow color
+        distinguishes it visually from the blue mean and red min lines in adjacent views.
       </p>
-
       <h3>Interaction Design</h3>
       <p>
-        All four views are linked through a single <code>setFrame()</code> function.
-        Clicking any dot on the mean chart or scatter plot jumps the satellite image and all
-        other views to that frame simultaneously — a details-on-demand technique that lets users
+        All five views are linked through a single <code>setFrame()</code> function.
+        Clicking any dot on the mean chart, scatter plot, or bar chart jumps the satellite image
+        and all other views to that frame simultaneously — a details-on-demand technique that lets users
         connect a statistical anomaly directly to the spatial imagery that caused it.
-        The scatter plot's orange highlight ring moves to the selected frame, maintaining
-        positional context within the distribution even while the image view updates.
+        The scatter plot's orange highlight ring and the bar chart's highlight box both move
+        to the selected frame, maintaining positional context across views.
         The play animation with adjustable speed lets users observe temporal evolution
         across all views at once, which a static plot cannot support.
       </p>
-
       <h3>Data Transformations</h3>
       <p>
         Each frame's mean, min, and max CMI values are scene-level aggregations —
@@ -191,15 +191,15 @@
         and used to normalize the PNG grayscale values so that brightness is consistent across frames.
         No data was filtered or excluded beyond masking fill values as defined in the GOES-R product specification.
       </p>
-
       <h3>Development Process</h3>
       <p>
         Approximately 25 person-hours total across the team.
         Setting up the data pipeline (<code>process_goes_to_png.py</code>) to pull NetCDF4 files
         from AWS S3, handle the GOES-R ABI fixed-grid projection, and compute per-frame statistics
         took the most time due to coordinate system issues (~10 hours).
-        Building the D3 visualization with four linked views took ~12 hours,
-        with the scatter plot interaction and cross-view synchronization being the most complex pieces.
+        Building the D3 visualization with five linked views took ~12 hours,
+        with the scatter plot and std deviation chart being the most insightful additions
+        since they reveal patterns invisible in the mean line chart alone.
         Writeup and final polish took ~3 hours.
       </p>
     </div>
